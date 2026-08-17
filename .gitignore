@@ -1,0 +1,29 @@
+# ========================
+# macOS
+# ========================
+.DS_Store
+
+
+# ========================
+# Fortran / fpm
+# ========================
+fortran/build/
+
+
+# ========================
+# Python virtual environment
+# ========================
+python/.venv/
+
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+
+# pytest
+.pytest_cache/
+
+
+# Jupyter
+.ipynb_checkpoints/
