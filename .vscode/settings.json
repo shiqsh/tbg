@@ -1,0 +1,12 @@
+{
+    "fortran.linter.compiler": "gfortran",
+    "fortran.linter.compilerPath": "/opt/homebrew/bin/gfortran",
+    "fortran.linter.includePaths": [
+        "${workspaceFolder}/fortran/build/gfortran_*",
+        "${workspaceFolder}/fortran/build/dependencies/stdlib/include"
+    ],
+    "cSpell.enabledFileTypes": {
+        "FortranFreeForm": false,
+        "FortranFixedForm": false
+    }
+}
