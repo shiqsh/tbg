@@ -8,5 +8,8 @@
     "cSpell.enabledFileTypes": {
         "FortranFreeForm": false,
         "FortranFixedForm": false
-    }
+    },
+    "cSpell.words": [
+        "bilayer"
+    ]
 }

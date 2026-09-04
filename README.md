@@ -67,9 +67,9 @@ tbg/
 │   └── settings.json          # Fortran 语言服务 / lint 配置
 │
 ├── data/                      # (空) 长期保存的输入 / benchmark / reference 数据
-├── results/                   # (空) 程序生成的数值结果
+├── results/                   # (空) 程序生成的数值结果，是最终需要用到文章中的结果
 ├── figures/                   # (空) 最终图片
-├── plot/                      # (空) 绘图脚本目录（规划放置 Gnuplot 脚本）
+├── plot/                      # (空) 绘图脚本目录（规划放置 Gnuplot 和 Python 脚本）
 │
 ├── fortran/                   # Fortran 数值实现（fpm 项目）
 │   ├── fpm.toml               # 项目配置：stdlib / openmp / blas
