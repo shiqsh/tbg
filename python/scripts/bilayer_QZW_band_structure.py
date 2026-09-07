@@ -8,10 +8,9 @@ import matplotlib.pyplot as plt
 # parameters
 # =========================
 
-m = 2.0
-lam = 0.0
-tp = 0.5
-
+m = 1.0
+lam = 0.025
+tp = 0.2
 
 
 # =========================
@@ -24,7 +23,6 @@ sigma2 = np.array([[0,-1j],[1j,0]],dtype=complex)
 sigma3 = np.array([[1,0],[0,-1]],dtype=complex)
 
 
-
 # =========================
 # QWZ Hamiltonian
 # =========================
@@ -35,7 +33,6 @@ def qwz(kx,ky):
     dz = m + np.cos(kx)+np.cos(ky)
 
     return dx*sigma1 + dy*sigma2 + dz*sigma3
-
 
 
 # =========================
@@ -56,7 +53,6 @@ def bilayer_qwz(kx,ky):
     H[2:,:2]=tp*sigma0
 
     return H
-
 
 
 # =========================
