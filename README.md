@@ -57,6 +57,9 @@ pip install -r requirements.txt
 
 依赖（`requirements.txt`）：`numpy`、`scipy`、`matplotlib` 等。
 
+已实现的 BM 能带程序及运行方法见 [Python 说明](python/README.md)。
+计算入口在 `python/scripts/tbg/`，绘图入口统一放在根目录 `plot/tbg/`。
+
 ## 4. 目录结构（现状）
 
 ```text
@@ -128,16 +131,18 @@ python/
 │   └── kpath.py        <->  tbg_kpath.f90
 ├── scripts/            # 计算脚本：band_structure / dos / dirac / vhs /
 │                       #           fermi_surface / orbital_magnetization
-├── plot/               # 绘图脚本：读取 results/，不重新计算 Hamiltonian
 └── tests/
 ```
+
+绘图脚本统一位于项目根目录的 `plot/`（Python 和 Gnuplot 均可），
+按模型分目录；BM 绘图使用 `plot/tbg/tbg_bands.py`，只读取结果、不重新计算 Hamiltonian。
 
 ### 5.3 数据流
 
 ```text
 fortran/app/  ─┐
-               ├─→  results/  ──┬─→  python/plot/  ─┐
-python/scripts/─┘               └─→  plot/ (gnuplot) ─┴─→  figures/
+               ├─→  results/  ──→  plot/  ──→  figure/
+python/scripts/─┘                  (Python / Gnuplot)
 ```
 
 原则：数值计算一次、数据长期保存（`results/`）、绘图可反复修改（改线宽/颜色/坐标范围时**不需要**重算 Hamiltonian）。
@@ -179,7 +184,7 @@ python/scripts/─┘               └─→  plot/ (gnuplot) ─┴─→  fig
 3. **实现 Python 对应版本**，逐项比对能带等结果（`max|E_python − E_fortran|`）；
 4. **heterostrain 系列计算**：能带 / Dirac 点 / VHS / DOS / Fermi surface；
 5. **轨道磁化**（orbital magnetization）计算；
-6. **绘图与论文级 figure**（`python/plot/` 与 `plot/`）。
+6. **绘图与论文级 figure**（脚本统一放在根目录 `plot/`）。
 
 ---
 

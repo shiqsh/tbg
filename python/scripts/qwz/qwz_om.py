@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
+from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
+
+# =====
+# 输出路径
+# ======
+ROOT = Path(__file__).resolve().parents[3]
+
+FIGURE_DIR = ROOT / "figure" / "orbital-magnetization" / "qwz" / "om"
+FIGURE_DIR.mkdir(parents=True, exist_ok=True) # 如果目录不存在，则创建目录
 
 # ==========
 # Pauli matrices
@@ -149,14 +158,14 @@ def OM(lambda_, m=1.0, t_perp=0.2, mu=0.0, d=1.0, nk=101, prefactor=1.0): # 这�
             Mx += -prefactor * Fy 
             My += prefactor * Fx
 
-            # -----------
-            # Integration weight
-            # -----------
-            weight = dk**2 / (2.0 * np.pi)**2
-            Mx *= weight
-            My *= weight
+    # -----------
+    # Integration weight
+    # -----------
+    weight = dk**2 / (2.0 * np.pi)**2
+    Mx *= weight
+    My *= weight
 
-            return (Mx, My, is_insulator, nocc_min, nocc_max, fermi_distance)
+    return (Mx, My, is_insulator, nocc_min, nocc_max, fermi_distance)
 
 
 # ==========
@@ -204,6 +213,8 @@ if __name__ == "__main__":
     ax.plot(lambda_list, Mx_list, marker='o', label=r"$M_x$")
     ax.plot(lambda_list, My_list, marker='o', label=r"$M_y$")
 
+    ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0), useMathText=True)
+
     ax.set_xlabel(r"$\lambda$")
     ax.set_ylabel(r"$M$")
     ax.set_title(rf"Bilayer QWZ Orbital Magnetization ($m={m}$, $t_\perp={t_perp}$, $\mu={mu}$, $d={d}$)" ) # 这里rf， r: raw string, f: format string
@@ -212,6 +223,23 @@ if __name__ == "__main__":
     ax.legend()
 
     fig.tight_layout() # 请注意这里是fig，而不是plt
+
+    # -----
+    # 输出
+    # -----
+    figure_name = (
+        f"qwz_om_python"
+        f"_m_{m:.3f}"
+        f"_tperp_{t_perp:.3f}"
+        f"_mu_{mu:.3f}"
+    )
+
+    fig.savefig(
+    FIGURE_DIR / f"{figure_name}.pdf",
+    dpi=300,
+    bbox_inches="tight"
+    )
+
     plt.show() # plt 仍然是 pyplot 模块
 
 

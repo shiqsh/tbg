@@ -13,8 +13,8 @@ subroutine myzheev(N, W, H, V)
     
     integer,intent(in) :: N
     real(8),intent(out) :: W(:)
-    complex(8),intent(inout) :: H(:,:)
-    complex(8), intent(inout) :: V(:,:) ! 特征向量矩阵（列向量为特征向量）
+    complex(8),intent(in) :: H(:,:)
+    complex(8), intent(out) :: V(:,:) ! 特征向量矩阵（列向量为特征向量）
     integer :: INFO
     real(8) :: RWORK(3*N-2)
     complex(8) :: WORK(3*N)

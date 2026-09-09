@@ -1,6 +1,7 @@
 module BILAYER_QWZ
     use CONSTANTS
     use TBG, only : ASMBL
+    use stdlib_linalg, only: kronecker_product, diag
     implicit none
 
 contains
@@ -20,13 +21,49 @@ contains
         kb = [k(1) - lambda, k(2)]
 
         tH(1,1,:,:) = sin(kt(1))*sigma_1 + sin(kt(2))*sigma_2 + (m + cos(kt(1)) + cos(kt(2)))*sigma_3
-        tH(2,2,:,:) = sin(kb(1))*sigma_1 + sin(kb(2))*sigma_2 + (m + cos(kt(1)) + cos(kb(2)))*sigma_3
+        tH(2,2,:,:) = sin(kb(1))*sigma_1 + sin(kb(2))*sigma_2 + (m + cos(kb(1)) + cos(kb(2)))*sigma_3
         tH(1,2,:,:) = t_perp*sigma_0
         tH(2,1,:,:) = t_perp*sigma_0
 
         call ASMBL(2, H, tH)
 
     end subroutine H_BILAYER_QWZ
+
+
+    ! ==========
+! Bilayer QWZ Hamiltonian interface
+!
+! ham_param(1) = lambda
+! ham_param(2) = m
+! ham_param(3) = t_perp
+! ==========
+
+subroutine HAM_QWZ(k, ham_param, Ham)
+
+    implicit none
+
+    real(8), intent(in) :: k(2)
+    real(8), intent(in) :: ham_param(:)
+
+    complex(8), intent(out) :: Ham(:,:)
+
+    real(8) :: lambda, m, t_perp
+
+
+    if (size(ham_param) /= 3) then
+        error stop "HAM_QWZ: ham_param dimension error"
+    endif
+
+
+    lambda = ham_param(1)
+    m      = ham_param(2)
+    t_perp = ham_param(3)
+
+
+    call H_BILAYER_QWZ(k, lambda, m, t_perp, Ham)
+
+
+end subroutine HAM_QWZ
 
 
     subroutine KPATH_QWZ(numk, k, dk)
@@ -66,6 +103,23 @@ contains
         enddo
     
     end subroutine KPATH_QWZ
+
+
+    ! ==========
+    ! z方向上投影算符
+    ! ==========
+    subroutine Z_BQWZ(d, z)
+        implicit none
+
+        real(8), intent(in) :: d
+        real(8), intent(out) :: z(:)
+
+        z(1) = d/2.d0;    z(2) = d/2.d0
+        z(3) = -d/2.d0;    z(4) = -d/2.d0
+
+        ! z = diag((d/2.d0) * kronecker_product(sigma_3, sigma_0))
+    
+    end subroutine Z_BQWZ
     
 
 end module BILAYER_QWZ
