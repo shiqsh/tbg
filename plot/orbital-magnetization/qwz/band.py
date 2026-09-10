@@ -13,9 +13,9 @@ ROOT = Path(__file__).resolve().parents[3]
 
 numk = 100
 
-m = 2.0
-lambda_ = 0.0
-t_perp = 0.5
+m = 1.0
+lambda_ = 0.2
+t_perp = 0.2
 
 # ============================================================
 # File name
@@ -54,28 +54,35 @@ energy = data[:, 3:7]
 # ============================================================
 # Plot
 # ============================================================
+fig, ax = plt.subplots(figsize=(8, 8))
 
 for iband in range(4):
-    plt.plot(dk, energy[:, iband])
+    ax.plot(dk, energy[:, iband])
 
 ticks = dk[[0, numk, 2*numk, 3*numk]]
 
-plt.xticks(
+ax.set_xticks(
     ticks,
     [r"$\Gamma$", "X", "M", r"$\Gamma$"]
 )
 
 for x in ticks:
-    plt.axvline(x, linewidth=0.8)
+    ax.axvline(x, linewidth=0.8)
 
-plt.axhline(0.0, color="k", linewidth=0.8)
+ax.axhline(0.0, color="k", linewidth=0.8)
+# plt.axhline(-1.0, color="k", linewidth=0.8)
 
-plt.ylabel("Energy")
-plt.xlim(dk[0], dk[-1])
+ax.set_ylabel("Energy")
+ax.set_xlim(dk[0], dk[-1])
+ax.set_title(
+    rf"Bilayer QWZ band structure "
+    rf"($m={m:.1f}$, $t_\perp={t_perp:.1f}$, $\lambda={lambda_:.3f}$)"
+)
 
-plt.tight_layout()
+ax.legend()
+fig.tight_layout()
 
 figure_file.parent.mkdir(parents=True, exist_ok=True)
 
-plt.savefig(figure_file, dpi=300)
+fig.savefig(figure_file, dpi=300)
 plt.show()

@@ -6,9 +6,9 @@ program QWZ_BAND
     integer, parameter :: numk = 100
     integer, parameter :: nk = 3*numk + 1
 
-    real(8), parameter :: m = 2.0d0
-    real(8), parameter :: lambda = 0.0d0
-    real(8), parameter :: t_perp = 0.5d0
+    real(8), parameter :: m = 1.0d0
+    real(8), parameter :: lambda = 0.2d0
+    real(8), parameter :: t_perp = 0.2d0
     
     integer :: i, fileunit
     real(8) :: k(2, nk), dk(nk)

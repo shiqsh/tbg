@@ -174,12 +174,12 @@ def OM(lambda_, m=1.0, t_perp=0.2, mu=0.0, d=1.0, nk=101, prefactor=1.0): # è¿™é
 if __name__ == "__main__":
     m = 1.0
     t_perp = 0.2
-    mu = 0.0
+    mu = -1.0
     d = 1.0
     nk = 101
     prefactor = 1.0
 
-    lambda_list = np.linspace(0.0, 0.2, 20, endpoint=False)
+    lambda_list = np.linspace(0.0, 0.2, 21, endpoint=True)
 
     Mx_list = np.empty_like(lambda_list)
     My_list = np.empty(len(lambda_list))

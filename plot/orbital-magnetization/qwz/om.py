@@ -17,7 +17,7 @@ FIGURE_DIR.mkdir(parents=True, exist_ok=True) # 如果目录不存在，则创�
 # 数据文件
 # =====
 
-name = f'qwz_om_m_1.000_tperp_0.200_mu_0.000'
+name = f'qwz_om_m_1.000_tperp_0.200_mu_-1.000'
 
 data_file = (ROOT / "data" / "orbital-magnetization" / "qwz" / "om" /\
              f"{name}.dat")

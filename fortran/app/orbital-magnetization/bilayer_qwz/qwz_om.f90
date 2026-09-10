@@ -28,7 +28,7 @@ program QWZ_OM
     lambda_list = linspace(0.0, 0.2, 21)
 
     ! ----- chemical potential -----
-    mu = 0.d0
+    mu = -1.0d0
     d = 1.d0
 
     ! -----
