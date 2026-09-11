@@ -13,9 +13,9 @@ ROOT = Path(__file__).resolve().parents[3]
 
 numk = 100
 
-m = 1.0
-lambda_ = 0.2
-t_perp = 0.2
+m = 2.0
+lambda_ = 0.0
+t_perp = 0.5
 
 # ============================================================
 # File name
@@ -28,6 +28,7 @@ data_file = (
     / "data"
     / "orbital-magnetization"
     / "qwz"
+    / "fortran"
     / "band"
     / f"{name}.dat"
 )
@@ -37,6 +38,7 @@ figure_file = (
     / "figure"
     / "orbital-magnetization"
     / "qwz"
+    / "fortran"
     / "band"
     / f"{name}.pdf"
 )

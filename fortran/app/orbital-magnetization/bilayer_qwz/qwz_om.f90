@@ -28,7 +28,7 @@ program QWZ_OM
     lambda_list = linspace(0.0, 0.2, 21)
 
     ! ----- chemical potential -----
-    mu = -1.0d0
+    mu = 0.2d0
     d = 1.d0
 
     ! -----
@@ -66,7 +66,7 @@ program QWZ_OM
     ! Output
     ! ==========
     ! -----file name-----
-    filename = '../data/orbital-magnetization/qwz/om/qwz_om_m_'//trim(adjustl(s_m))//'_tperp_'//trim(adjustl(s_tperp))//'_mu_'//trim(adjustl(s_mu))//'.dat'
+    filename = '../data/orbital-magnetization/qwz/fortran/om/qwz_om_m_'//trim(adjustl(s_m))//'_tperp_'//trim(adjustl(s_tperp))//'_mu_'//trim(adjustl(s_mu))//'.dat'
 
     open(newunit=fileunit, file = trim(filename), status = 'replace')
 

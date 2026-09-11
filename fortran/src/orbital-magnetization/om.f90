@@ -1,5 +1,5 @@
 module OM
-    use CONSTANTS
+    use CONSTANTS, only : PI
     use LINALG, only : myzheev
     use stdlib_linalg, only : diag
     implicit none
