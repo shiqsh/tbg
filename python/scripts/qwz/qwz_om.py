@@ -174,7 +174,7 @@ def OM(lambda_, m=1.0, t_perp=0.2, mu=0.0, d=1.0, nk=101, prefactor=1.0): # è¿™é
 if __name__ == "__main__":
     m = 1.0
     t_perp = 0.2
-    mu = -1.0
+    mu = 0.0
     d = 1.0
     nk = 101
     prefactor = 1.0

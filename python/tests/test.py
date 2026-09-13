@@ -2,6 +2,4 @@
 
 import numpy as np 
 
-klist = np.linspace(1, 10, 9, endpoint=True)
-
-print(klist)
+print(2*np.pi/251)

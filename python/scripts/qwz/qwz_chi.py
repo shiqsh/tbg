@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np 
 import matplotlib.pyplot as plt
 
-from qwz_om import H_BILAYER_QWZ, sigma_0, sigma_1, sigma_2, sigma_3
+from qwz_om import OM, H_BILAYER_QWZ, sigma_0, sigma_1, sigma_2, sigma_3
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -74,6 +74,9 @@ def H_DERIVATIVES(k, lambda_):
 # delta_eta(E - mu) = exp[-((E -mu)/eta)^2]/(sqrt(pi)*eta)
 # ==========
 def DELTA_GAUSSIAN(E, mu, eta):
+
+    if eta <= 0.0:
+        raise ValueError("eta must be positive")
 
     delta = (
         np.exp(-((E - mu)/eta)**2)/(np.sqrt(np.pi)*eta)
@@ -165,17 +168,17 @@ def CHI_FS(klist, dk, z, eta, lambda_, m, t_perp, mu, prefactor):
                         Hy_e[mm, n] * z_e[n, mm]
                     )
 
-            # ----- 回到对mm的求和 -----
-            Gx += delta_E * np.real(
-                Hx_mm * A_lambda - Hlambda_mm * A_x
-            )
+                # ----- 回到对mm的求和 -----
+                Gx += delta_E * np.real(
+                    Hx_mm * A_lambda - Hlambda_mm * A_x
+                )
 
-            Gy += delta_E * np.real(
-                Hy_mm * A_lambda - Hlambda_mm * A_y
-            )
+                Gy += delta_E * np.real(
+                    Hy_mm * A_lambda - Hlambda_mm * A_y
+                )
 
-        sum_Gx += Gx
-        sum_Gy += Gy
+            sum_Gx += Gx
+            sum_Gy += Gy
 
     # -----
     # Integration Weight
@@ -199,7 +202,7 @@ def CHI_FS(klist, dk, z, eta, lambda_, m, t_perp, mu, prefactor):
 # ==========
 # FIX contribution 
 # CHI_FIXED(lambda, alpha)
-# Attention: directly use braket{m|{Hlambda, z}|m}
+# Attention: directly use braket{m|{Hlambda, z}|n}
 # ==========
 def CHI_FIXED(klist, dk, z, lambda_, m, t_perp, mu, prefactor):
 
@@ -304,13 +307,13 @@ if __name__=="__main__":
     common_param = {
         "m": 1.0,
         "t_perp": 0.2,
-        "mu": 0.0,
+        "mu": 1.0,
         "d": 1.0,
-        "nk": 101,
+        "nk": 251,
         "prefactor": 1.0
     }
 
-    eta = 0.02
+    eta = 0.0258
 
     klist = np.linspace(-np.pi, np.pi, common_param["nk"], endpoint=False)
     dk = 2.0*np.pi/common_param["nk"]
@@ -340,6 +343,10 @@ if __name__=="__main__":
     chi_tot_x_list = np.empty_like(lambda_list)
     chi_tot_y_list = np.empty_like(lambda_list)
 
+    # ----- Orbital magnetization ----- 
+    Mx_list = np.empty_like(lambda_list)
+    My_list = np.empty_like(lambda_list)
+
     # ----------
     # 计算Susceptibility
     # ----------
@@ -365,6 +372,12 @@ if __name__=="__main__":
         chi_tot_x_list[i] = chi_tot_x
         chi_tot_y_list[i] = chi_tot_y
 
+        # ----- 计算轨道磁化 ----- 
+        Mx, My, is_insulator, nocc_min, nocc_max, fermi_distance = OM(lambda_, **common_param)
+
+        Mx_list[i] = Mx
+        My_list[i] = My
+
         # ----------
         # print
         # ----------
@@ -375,17 +388,241 @@ if __name__=="__main__":
             f"TOT = ({chi_tot_x: .8e}, {chi_tot_y: .8e})"
         )
 
+    # ==========
+    # Reconstruct M from susceptibility
+    # ==========
+    My_from_chi = np.empty_like((2, len(lambda_list)))
+
+    M_from_chi = np.empty((2, len(lambda_list)))
+
+    # 初值
+    M_from_chi[0, 0] = Mx_list[0] # Mx
+    M_from_chi[1, 0] = My_list[0] # My
+
+    for i in range(1, len(lambda_list)):
+
+        delta_lambda = lambda_list[i] - lambda_list[i-1]
+
+        chi_mid_x = 0.5 * (chi_tot_x_list[i] + chi_tot_x_list[i-1])
+        chi_mid_y = 0.5 * (chi_tot_y_list[i] + chi_tot_y_list[i-1])
+
+        M_from_chi[0, i] = (M_from_chi[0, i-1] + chi_mid_x * delta_lambda)
+        M_from_chi[1, i] = (M_from_chi[1, i-1] + chi_mid_y * delta_lambda)
+
+
     # ----------
-    # Output data
+    # 误差分析，针对nk和eta
     # ----------
+    M_error_y = My_list - M_from_chi[1, :]
+    max_abs_error_y = np.max(np.abs(M_error_y))
+
+    rms_error_y = np.sqrt(np.mean(M_error_y**2))
+
+    print(
+        f"max |My - My_from_chi| = {max_abs_error_y:.8e}"
+    )
+    print(
+        f"RMS error = {rms_error_y:.8e}"
+    )
+    # ----- Dimensionless quantity -----    
+    M_scale = np.max(My_list) - np.min(My_list)
+
+    normalized_error_y = max_abs_error_y / M_scale
+
+    print(
+        f"normalized max error = {normalized_error_y:.8e}"
+    )
+
+
+    # ==========
+    # Output data，输出数据也是主程序的一部分
+    # ==========
+
     name  = (
         f"qwz_chi"
         f"_m_{common_param['m']:.3f}"
         f"_tperp_{common_param['t_perp']:.3f}"
         f"_mu_{common_param['mu']:.3f}"
+        f"_eta_{eta:.3f}"
+        f"_nk_{common_param['nk']}"
     )
 
+    RUN_FIGURE_DIR = FIGURE_DIR / name
+    RUN_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
 
+    data_file = DATA_DIR / f"{name}.dat"
+
+    with open(data_file, "w") as of: # output file
+
+        # ----- 输出文件中的参数注释 -----
+        of.write(f"# m = {common_param['m']:.16e}\n")
+        of.write(f"# t_perp = {common_param['t_perp']:.16e}\n")
+        of.write(f"# mu = {common_param['mu']:.16e}\n")
+        of.write(f"# d = {common_param['d']:.16e}\n")
+        of.write(f"# nk = {common_param['nk']}\n")
+        of.write(f"# eta = {eta:.16e}\n")
+        of.write(f"# prefactor = {common_param['prefactor']:.16e}\n")
+        
+        # ----- column information(表头)-----
+        of.write(
+            "# columns: lambda "
+            "Mx My " 
+            "Mx_from_chi My_from_chi " # 加入空格 
+            "chi_fix_x chi_fix_y chi_fs_x chi_fs_y chi_tot_x chi_tot_y\n"
+            )
+
+        for i in range(len(lambda_list)):
+
+            of.write(
+                f"{lambda_list[i]:32.16e}"
+                f"{Mx_list[i]:32.16e}"
+                f"{My_list[i]:32.16e}"
+                f"{M_from_chi[0, i]:32.16e}"
+                f"{M_from_chi[1, i]:32.16e}"
+                f"{chi_fix_x_list[i]:32.16e}"
+                f"{chi_fix_y_list[i]:32.16e}"
+                f"{chi_fs_x_list[i]:32.16e}"
+                f"{chi_fs_y_list[i]:32.16e}"
+                f"{chi_tot_x_list[i]:32.16e}"
+                f"{chi_tot_y_list[i]:32.16e}\n"
+            )
+
+
+    # ==========
+    # 绘图
+    # ==========
+    # ----------
+    # plot chi_x
+    # ----------
+    fig, ax = plt.subplots(figsize = (8,8))
+
+    ax.plot(lambda_list, chi_fix_x_list, marker="o", label = r"$\chi^{\mathrm{FIX}}_{\lambda, x}$")
+    ax.plot(lambda_list, chi_fs_x_list, marker="o", label = r"$\chi^{\mathrm{FS}}_{\lambda, x}$")
+    ax.plot(lambda_list, chi_tot_x_list, marker="o", label = r"$\chi^{\mathrm{TOT}}_{\lambda, x}$")
+
+    ax.ticklabel_format(axis="y", style="sci", scilimits=(0,0), useMathText=True)
+
+    ax.set_xlabel(r"$\lambda$")
+    ax.set_ylabel(r"$\chi_{\lambda,x}$")
+
+    ax.set_title(
+        rf"Bilayer QWZ Susceptibility "
+        rf"($m={common_param['m']}$, "
+        rf"$t_\perp={common_param['t_perp']}$, "
+        rf"$\mu={common_param['mu']}$, "
+        rf"$\eta={eta}$, "
+        rf"$N_k={common_param['nk']}$)"
+        )
+
+    ax.grid(True)
+    ax.legend()
+
+    fig.tight_layout()
+
+    fig.savefig(
+    RUN_FIGURE_DIR / f"{name}_x.pdf",
+        dpi=300,
+        bbox_inches="tight"
+        )
+
+
+    # ----------
+    # plot chi_y
+    # ----------
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    ax.plot(
+        lambda_list,
+        chi_fix_y_list,
+        marker="o",
+        label=r"$\chi^{\mathrm{FIX}}_{\lambda,y}$"
+        )
+
+    ax.plot(
+        lambda_list,
+        chi_fs_y_list,
+        marker="o",
+        label=r"$\chi^{\mathrm{FS}}_{\lambda,y}$"
+    ) 
+
+    ax.plot(
+        lambda_list,
+        chi_tot_y_list,
+        marker="o",
+        label=r"$\chi^{\mathrm{TOT}}_{\lambda,y}$"
+    )
+
+    ax.ticklabel_format(
+        axis="y",
+        style="sci",
+        scilimits=(0, 0),
+        useMathText=True
+        )
+
+    ax.set_xlabel(r"$\lambda$")
+    ax.set_ylabel(r"$\chi_{\lambda,y}$")
+
+    ax.set_title(
+        rf"Bilayer QWZ Susceptibility "
+        rf"($m={common_param['m']}$, "
+        rf"$t_\perp={common_param['t_perp']}$, "
+        rf"$\mu={common_param['mu']}$, "
+        rf"$\eta={eta}$, "
+        rf"$N_k={common_param['nk']}$)"
+        )
+
+    ax.grid(True)
+    ax.legend()
+
+    fig.tight_layout()
+
+    fig.savefig(
+        RUN_FIGURE_DIR / f"{name}_y.pdf",
+        dpi=300,
+        bbox_inches="tight"
+        )
+
+    # -----
+    # Bechmark
+    # M vs sum over chi_{i} delta{lambda_i}
+    # -----
+    fig, ax = plt.subplots(figsize=(8,8))
+
+    ax.plot(lambda_list, My_list, marker="o", label=r"$M_y $")
+    ax.plot(lambda_list, M_from_chi[1,:], marker="o", label=r"$M_y(0)+\int_0^\lambda\chi_{\lambda',y}^{\mathrm{TOT}}d\lambda'$")
+
+    ax.ticklabel_format(axis="y", style="sci",scilimits=(0,0), useMathText=True)
+
+    ax.set_xlabel(r"$\lambda$")
+    ax.set_ylabel(r"$M_y$")
+
+    ax.set_title(
+        rf"Bilayer QWZ: $M_y$ vs. integrated susceptibility "
+        rf"($m={common_param['m']}$, "
+        rf"$t_\perp={common_param['t_perp']}$, "
+        rf"$\mu={common_param['mu']}$, "
+        rf"$\eta={eta}$, "
+        rf"$N_k={common_param['nk']}$)"
+    )
+
+    ax.grid(True)
+    ax.legend()
+
+    fig.tight_layout()
+
+    fig.savefig(
+        RUN_FIGURE_DIR / f"{name}_benchmark_my.pdf",
+        dpi = 300,
+        bbox_inches="tight"
+        )
+
+    # ----- show all figures ----- 
+    plt.show()
+
+                
+
+
+    
 
     
 

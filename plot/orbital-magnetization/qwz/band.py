@@ -13,9 +13,9 @@ ROOT = Path(__file__).resolve().parents[3]
 
 numk = 100
 
-m = 2.0
-lambda_ = 0.0
-t_perp = 0.5
+m = 1.0
+lambda_ = 0.00
+t_perp = 0.2
 
 # ============================================================
 # File name
