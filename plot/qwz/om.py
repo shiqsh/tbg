@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # =====
 # 输出路径
 # =====
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 
 FIGURE_DIR = (ROOT 
               / "figure" 

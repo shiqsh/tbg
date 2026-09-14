@@ -311,7 +311,7 @@ if __name__=="__main__":
         "prefactor": 1.0
     }
 
-    eta = 0.0258
+    eta = 0.03
 
     klist = np.linspace(-np.pi, np.pi, common_param["nk"], endpoint=False)
     dk = 2.0*np.pi/common_param["nk"]

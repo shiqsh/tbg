@@ -2,18 +2,8 @@ module OM
     use CONSTANTS, only : PI
     use LINALG, only : myzheev
     use stdlib_linalg, only : diag
+    use MODEL_INTERFACE, only : HAMILTONIAN
     implicit none
-
-    abstract interface
-        subroutine HAMILTONIAN(k, ham_param, Ham)
-            implicit none
-
-            real(8), intent(in) :: k(2)
-            real(8), intent(in) :: ham_param(:)
-            complex(8), intent(out) :: Ham(:,:)
-        end subroutine HAMILTONIAN
-
-    end interface
     
 contains
 

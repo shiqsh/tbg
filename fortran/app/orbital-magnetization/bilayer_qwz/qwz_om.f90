@@ -26,10 +26,10 @@ program QWZ_OM
     m = 1.d0
     t_perp =  0.2d0
     lambda_list = linspace(0.0, 0.2, 21)
+    d = 1.d0
 
     ! ----- chemical potential -----
-    mu = 0.2d0
-    d = 1.d0
+    mu = -1.0d0
 
     ! -----
     ! e/(hbar*c)
@@ -47,9 +47,9 @@ program QWZ_OM
     ! Numerical parameter 
     ! delta : 差分步长，nk ： 沿着倒格矢基矢每一条边的分割数
     ! -----
-    delta = 1.d-3
-    nk = 101
+    delta = 1.d-5
     delta_h  = delta*(norm2(b1))
+    nk = 251
 
     ! ==========
     ! z-position operator
@@ -80,12 +80,11 @@ program QWZ_OM
 
     do i = 1, size(lambda_list)
 
-        ham_param(1) = lambda_list(i)
         ! ----- Hamiltonian parameter -----
         ham_param = [lambda_list(i), m, t_perp]
 
         call CALCULATE_OM(4, nk, b1, b2, delta_h, mu, prefactor, zdiag, ham_param, HAM_QWZ, Mx, My)
-        write(fileunit, '(3ES32.16)')lambda_list(i), Mx, My
+        write(fileunit, '(3ES32.16E3)')lambda_list(i), Mx, My
 
     enddo
 
