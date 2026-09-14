@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # ======
 ROOT = Path(__file__).resolve().parents[3]
 
-FIGURE_DIR = ROOT / "figure" / "orbital-magnetization" / "qwz" /  "python" / "om"
+FIGURE_DIR = ROOT / "figure" / "qwz" /  "python" / "om"
 FIGURE_DIR.mkdir(parents=True, exist_ok=True) # 如果目录不存在，则创建目录
 
 # ==========

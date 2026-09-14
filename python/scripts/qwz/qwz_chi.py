@@ -12,7 +12,6 @@ ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = (
     ROOT
     / "data" 
-    / "orbital-magnetization"
     / "qwz"
     / "python"
     / "susceptibility"
@@ -21,7 +20,6 @@ DATA_DIR = (
 FIGURE_DIR = (
     ROOT 
     / "figure" 
-    / "orbital-magnetization"
     / "qwz"
     / "python"
     / "susceptibility"

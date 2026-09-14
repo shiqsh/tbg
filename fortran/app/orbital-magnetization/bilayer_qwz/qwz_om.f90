@@ -66,7 +66,7 @@ program QWZ_OM
     ! Output
     ! ==========
     ! -----file name-----
-    filename = '../data/orbital-magnetization/qwz/fortran/om/qwz_om_m_'//trim(adjustl(s_m))//'_tperp_'//trim(adjustl(s_tperp))//'_mu_'//trim(adjustl(s_mu))//'.dat'
+    filename = '../data/qwz/fortran/om/qwz_om_m_'//trim(adjustl(s_m))//'_tperp_'//trim(adjustl(s_tperp))//'_mu_'//trim(adjustl(s_mu))//'.dat'
 
     open(newunit=fileunit, file = trim(filename), status = 'replace')
 

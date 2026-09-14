@@ -21,7 +21,7 @@ program QWZ_BAND
     write(s_m, '(F8.3)') m
     write(s_tperp, '(F8.3)') t_perp
 
-    filename = '../data/orbital-magnetization/qwz/fortran/band/qwz_band_lambda_'//trim(adjustl(s_lambda))//'_m_'//trim(adjustl(s_m))//'_tperp_'//trim(adjustl(s_tperp))//'.dat'
+    filename = '../data/qwz/fortran/band/qwz_band_lambda_'//trim(adjustl(s_lambda))//'_m_'//trim(adjustl(s_m))//'_tperp_'//trim(adjustl(s_tperp))//'.dat'
 
     call KPATH_QWZ(numk, k, dk)
 
