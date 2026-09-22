@@ -26,17 +26,16 @@ module CONSTANTS
 ! Graphene constants
 ! ==================
     real(8), parameter :: d_graphene   = 1.42d-10
-    real(8), parameter :: a_graphene    = sqrt(3.d0)*d_graphene
+    real(8), parameter :: a_graphene_constant    = sqrt(3.d0)*d_graphene
     real(8), parameter :: vF   = 5.944d-10*eV ! 注意，这里的vF实际上是vF*hbbar, 也就是说最初的vF = 5.944d-10*eV/1.054572663d-34
 
 ! ------
 ! grapphene geometry
 ! -----
-    real(8), parameter :: a1(2) = a_graphene*[1.d0/2.d0, sqrt(3.d0)/2.d0 ]
-    real(8), parameter :: a2(2) = a_graphene*[-1.d0/2.d0, sqrt(3.d0)/2.d0 ]
-    real(8), parameter :: b1(2) = (4.d0*PI/(sqrt(3.d0)*a_graphene))*[sqrt(3.d0)/2.d0, 1.d0/2.d0 ]
-    real(8), parameter :: b2(2) = (4.d0*PI/(sqrt(3.d0)*a_graphene))*[-sqrt(3.d0)/2.d0, 1.d0/2.d0 ]
-    real(8), parameter :: K0(2) = (4.d0*PI/(3.d0*a_graphene))*[1.d0, 0.d0]
+    real(8), parameter :: a_graphene(2,2) = reshape(a_graphene_constant*[1.d0/2.d0, sqrt(3.d0)/2.d0, -1.d0/2.d0, sqrt(3.d0)/2.d0], [2,2])
+    real(8), parameter :: b_graphene(2,2) = reshape((4.d0*PI/(sqrt(3.d0)*a_graphene_constant))*[sqrt(3.d0)/2.d0, 1.d0/2.d0, -sqrt(3.d0)/2.d0, 1.d0/2.d0], [2,2])
+    real(8), parameter :: z_graphene = 3.35d-10
+    real(8), parameter :: K_graphene(2) = (4.d0*PI/(3.d0*a_graphene_constant))*[1.d0, 0.d0]
 
 ! ============================================================
 ! BM model parameters

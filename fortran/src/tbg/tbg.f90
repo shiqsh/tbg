@@ -30,7 +30,7 @@ subroutine DIAGONAL(A, D)
     real(8), intent(in) :: A(2)
     complex(8), intent(out) :: D(2, 2)
 
-    D =vF*(a(1)*sigma_1 + a(2)*sigma_2)
+    D =a(1)*sigma_1 + a(2)*sigma_2
 
 end subroutine DIAGONAL
 
@@ -47,7 +47,7 @@ subroutine VECTORS(theta, q1, q2, q3, b1m, b2m)
 
     real(8) :: q
 
-    q = 8.d0*PI*sin(theta/2.d0)/(3.d0*a_graphene)
+    q = 8.d0*PI*sin(theta/2.d0)/(3.d0*a_graphene_constant)
 
     q1 = q*[0.d0, -1.d0]
     q2 = q*[sqrt(3.d0)/2.d0, 1.d0/2.d0]
@@ -128,7 +128,7 @@ subroutine HTBG(k, te, theta, H)
     complex(8), allocatable :: tH(:,:,:,:)
 
     real(8) :: p(2)
-    real(8) :: b1m(2), b2m(2)
+    real(8) :: b1m(2), b2m(2)!
     real(8) :: q1(2), q2(2), q3(2) !qb, qtr, qtl
     integer :: layer1, layer2, n1, n2 ! n1, n2  ket index
 
@@ -223,7 +223,7 @@ subroutine KPATH(numk, theta, k, dk)
     real(8) :: l, t
     real(8) :: P(2,4)
 
-    l = 8.d0*PI*sin(theta/2.d0)/(3.d0*a_graphene)
+    l = 8.d0*PI*sin(theta/2.d0)/(3.d0*a_graphene_constant)
 
     P(:,1) = [0.d0, -l]
     P(:,2) = [sqrt(3.d0)*l/2.d0, -l/2.d0]
@@ -303,7 +303,7 @@ subroutine MOIRE_BZ_SCALE(theta, l)
     real(8), intent(in) :: theta
     real(8), intent(out) :: l
 
-    l = (8.d0*PI*sin(theta/2.d0))/(sqrt(3.d0)*a_graphene)
+    l = (8.d0*PI*sin(theta/2.d0))/(sqrt(3.d0)*a_graphene_constant)
 
 end subroutine MOIRE_BZ_SCALE
 
