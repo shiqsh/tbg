@@ -188,7 +188,7 @@ subroutine CALCULATE_OM(N, nk, b1, b2, delta, mu, prefactor, zdiag, ham_param, H
             ! -----Reduced coordinates-----
             u = -0.5d0 + real(iu-1, 8)/real(nk, 8)
             v = -0.5d0 + real(iv-1, 8)/real(nk, 8)
-            ! -----Cartesian momentum-----
+            ! ----- momentum-----
             k = u*b1 + v*b2
             ! -----Hamiltonian------
             call HAM(k, ham_param, H)

@@ -18,11 +18,15 @@ subroutine myzheev(N, W, H, V)
     integer :: INFO
     real(8) :: RWORK(3*N-2)
     complex(8) :: WORK(3*N)
-    complex(8) :: H_TEMP(N,N) 
+    complex(8), allocatable :: H_TEMP(:,:)
+
+    allocate(H_TEMP(N,N))
     
     H_TEMP = H ! 复制输入矩阵 H 到 H_TEMP（避免破坏原矩阵）
     call ZHEEV('V', 'U', N, H_TEMP, N, W, WORK, 3*N, RWORK, INFO) 
     V = H_TEMP
+
+    deallocate(H_TEMP)
     
     ! 检查 INFO
     if (INFO /= 0) then

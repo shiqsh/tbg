@@ -11,6 +11,8 @@ module CONSTANTS
 ! ==================
 ! Physical constants
 ! ==================
+    real(8), parameter :: m_e = 9.1093837015d-31 ! 电子质量
+    real(8), parameter :: c   = 2.99792458d8
     real(8), parameter :: eV   = 1.602176634d-19
     real(8), parameter :: hbar = 1.054572663d-34
 

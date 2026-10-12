@@ -66,15 +66,24 @@ end subroutine DEFORMATION
 ! Moire reciprocal lattice vectors under heterostrain
 ! bh is the 2 times 2 array of b1h and b2h
 ! ==========
-subroutine GEOMETRY_STRAIN(E, q1s, bs)
+subroutine GEOMETRY_STRAIN(theta, strain_epsilon, strain_phi, bs, q1s)
     implicit none 
 
-    real(8), intent(in) :: E(2,2)
-    real(8), intent(out) :: q1s(2)
+    real(8), intent(in) :: theta, strain_epsilon, strain_phi
     real(8), intent(out) :: bs(2,2)
+    real(8), intent(out), optional :: q1s(2)
 
-    q1s = matmul(transpose(E), K_graphene)
+    real(8) :: S(2,2), E(2,2)
+    real(8) :: vph, A(2)
+
+    call PSEUDOFIELDS(strain_epsilon, strain_phi, S, vph, A)
+    call DEFORMATION(theta, S, E)
+
     bs = matmul(transpose(E), b_graphene)
+    
+    if (present(q1s)) then
+        q1s = matmul(transpose(E), K_graphene)
+    endif
 
 end subroutine GEOMETRY_STRAIN
 
@@ -93,7 +102,7 @@ subroutine H_STRAIN(k, theta, epsilon1, strain_phi, H)
     complex(8), allocatable :: tH(:,:,:,:)
 
     real(8) :: p(2)
-    real(8) :: S(2,2), E(2,2)
+    real(8) :: S(2,2)
     real(8) :: q1s(2), bs(2, 2) ! geometry under heterostrain
     real(8) :: vph, A(2)
     integer :: layer1, layer2, n1, n2
@@ -101,10 +110,8 @@ subroutine H_STRAIN(k, theta, epsilon1, strain_phi, H)
 
     ! ----- 赝磁场 -----    
     call PSEUDOFIELDS(epsilon1, strain_phi, S, vph, A)
-    ! ----- 形变张量 ----- 
-    call DEFORMATION(theta, S, E)
     ! ----- moire reciprocal lattice vectors -----  
-    call GEOMETRY_STRAIN(E, q1s, bs)
+    call GEOMETRY_STRAIN(theta, epsilon1, strain_phi, bs, q1s)
 
     allocate(tH(NTBG, NTBG, 2, 2)) 
     tH = (0.d0, 0.d0)
@@ -187,18 +194,14 @@ subroutine KPATH_STRAIN(numk, theta, epsilon1, strain_phi, k, dk)
     integer :: i, j, nk
     real(8) :: t
     real(8) :: P(2, 4)
-    real(8) :: S(2, 2), E(2, 2)
     real(8) :: q1s(2), bs(2, 2)
-    real(8) :: vph, A(2)
 
-    call PSEUDOFIELDS(epsilon1, strain_phi, S, vph, A)
-    call DEFORMATION(theta, S, E)
-    call GEOMETRY_STRAIN(E, q1s, bs)
+    call GEOMETRY_STRAIN(theta, epsilon1, strain_phi, bs, q1s)
 
     P(:,1) = q1s
     P(:,2) = (2.d0/3.d0)*bs(:,1) + (1.d0/3.d0)*bs(:,2)
     P(:,3) = 0.5d0*q1s
-    P(:,4) = (0.d0, 0.d0)
+    P(:,4) = 0.d0
 
     nk = 1
     k(:, 1) = P(:, 1)
