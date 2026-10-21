@@ -35,7 +35,7 @@ program TBG_STRAIN_OM
     ! 固定参数
     ! -----
     d = 3.35d-10
-    theta = (1.05d0)*PI/180.d0
+    theta = (1.40d0)*PI/180.d0
     prefactor = 2.d0*m_e/hbar**2
 
     ! -----
@@ -43,14 +43,14 @@ program TBG_STRAIN_OM
     ! -----
     mu = 0.d0 
     delta = 1.d-3 ! 中心差分步长
-    ncut = 30 ! 对称截断数
-    nk = 30 ! BZ mesh
+    ncut = 80 ! 对称截断数
+    nk = 80 ! BZ mesh
 
     ! -----
     ! strian paramter
     ! -----
-    epsilon_list = linspace(0.d0, 2.d-3, 21)
-    phi_list = linspace(0.d0, PI, 21)
+    epsilon_list = linspace(0.d0, 0.d0, 1)
+    phi_list = linspace(0.d0, PI, 181)
 
     ! =====
     ! 选择扫描范围
@@ -63,8 +63,8 @@ program TBG_STRAIN_OM
     ie_start = 1
     ie_end = size(epsilon_list)
 
-    ip_start = 11
-    ip_end = 11
+    ip_start = 31
+    ip_end = 31
     ! ----- 检查索引 ----- 
     if (ie_start < 1 .or. ie_end > size(epsilon_list) &
         .or. ie_start > ie_end) then

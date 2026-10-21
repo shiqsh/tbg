@@ -1,23 +1,9 @@
 module SUSCEPTIBILITY
     use CONSTANTS, only : PI
-    use MODEL_INTERFACE, only : HAMILTONIAN
+    use MODEL_INTERFACE, only : HAMILTONIAN, H_DERIVATIVES_INTERFACE
     use LINALG, only : myzheev
     use OM, only : CALCULATE_OM
     implicit none
-
-    abstract interface
-        ! ----- Hamiltonian derivative interface ----- 
-        subroutine H_DERIVATIVES_INTERFACE(k, ham_param, dH_dkx, dH_dky, dH_dlambda)
-            implicit none
-
-            real(8), intent(in) :: k(2)
-            real(8), intent(in) :: ham_param(:)
-            complex(8), intent(out) :: dH_dkx(:,:)
-            complex(8), intent(out) :: dH_dky(:,:)
-            complex(8), intent(out) :: dH_dlambda(:,:)
-        end subroutine H_DERIVATIVES_INTERFACE
-
-    end interface
 
 contains
 
@@ -265,7 +251,7 @@ subroutine CALCULATE_CHI(N, nk, b1, b2, mu, eta, prefactor, zdiag, ham_param, &
     !$OMP SHARED(N,nk,b1,b2,mu,eta,zdiag,ham_param) &
     !$OMP REDUCTION(+:sum_Fx,sum_Fy,sum_Gx,sum_Gy) &
     !$OMP COLLAPSE(2) SCHEDULE(DYNAMIC)
-    do iu = 1, nk
+    do iu = 1, nk ! 积分中不可以取到nk + 1, 这样就会把边界点算两遍
         do iv = 1, nk
             ! -----Reduced coordinates-----
             u = -0.5d0 + real(iu-1, 8)/real(nk, 8)

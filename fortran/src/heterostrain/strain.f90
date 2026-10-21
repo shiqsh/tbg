@@ -223,5 +223,208 @@ subroutine KPATH_STRAIN(numk, theta, epsilon1, strain_phi, k, dk)
 end subroutine KPATH_STRAIN
 
 
+! ==========
+! Derivatives of pesudofields and strain tensor
+! ==========
+subroutine PSEUDOFIELDS_DERIVATIVES(strain_epsilon, strain_phi, lambda_name, &
+                                    dS_dlambda, dvph_dlambda, dA_dlambda)
+    implicit none
+    
+    real(8), intent(in) :: strain_epsilon
+    real(8), intent(in) :: strain_phi
+    character(len=*), intent(in) :: lambda_name ! epsilon or phi
+
+    real(8), intent(out) :: dS_dlambda(2, 2)
+    real(8), intent(out) :: dvph_dlambda
+    real(8), intent(out) :: dA_dlambda(2)
+
+    select case (lambda_name) !相当于if ... else ...
+
+    ! ----- Derivatives with respect to epsilon  ----- 
+    case ('strain_epsilon')
+        dvph_dlambda = 1.d0 - nu
+
+        dA_dlambda(1) = (1.d0+nu)*cos(2.d0*strain_phi)
+        dA_dlambda(2) = (1.d0+nu)*sin(2.d0*strain_phi)
+
+        dS_dlambda(1,1) = cos(strain_phi)**2-nu*sin(strain_phi)**2
+        dS_dlambda(1,2) = -(1.d0+nu)*cos(strain_phi)*sin(strain_phi)
+        dS_dlambda(2,1) = dS_dlambda(1,2)
+        dS_dlambda(2,2) = sin(strain_phi)**2-nu*cos(strain_phi)**2
+
+    ! ----- Derivatives with respect to phi ----- 
+    case ("strain_phi")
+        dvph_dlambda = 0.d0
+
+        dA_dlambda(1) = -2.d0*(1.d0+nu)*strain_epsilon*sin(2.d0*strain_phi)
+        dA_dlambda(2) =  2.d0*(1.d0+nu)*strain_epsilon*cos(2.d0*strain_phi)
+
+        dS_dlambda(1,1) = -(1.d0+nu)*strain_epsilon*sin(2.d0*strain_phi)
+        dS_dlambda(1,2) = -(1.d0+nu)*strain_epsilon*cos(2.d0*strain_phi)
+        dS_dlambda(2,1) = dS_dlambda(1,2)
+        dS_dlambda(2,2) =  (1.d0+nu)*strain_epsilon*sin(2.d0*strain_phi)
+
+    case DEFAULT
+
+        error stop "PSEUDOFIELDS_DERIVATIVES: invalid lambda_name"
+
+    end select 
+    
+end subroutine PSEUDOFIELDS_DERIVATIVES
+
+
+! ==========
+! Derivatives under heterostrain
+! Hx = dH/dkx, Hy = dH/dky, Hlambda = dH/dlambda
+! lambda = epsilon or phi 
+! ==========
+subroutine H_STRAIN_DERIVATIVES(strain_epsilon, strain_phi, lambda_name,& 
+                                dH_dkx, dH_dky, dH_dlambda)
+    implicit none
+    
+    real(8), intent(in) :: strain_epsilon
+    real(8), intent(in) :: strain_phi
+    character(len = *), intent(in) :: lambda_name   
+
+    complex(8), intent(out) :: dH_dkx(:,:)
+    complex(8), intent(out) :: dH_dky(:,:)
+    complex(8), intent(out), optional :: dH_dlambda(:,:)
+
+    complex(8), allocatable :: tHx(:,:,:,:) ! Block tensor for dH/dkx
+    complex(8), allocatable :: tHy(:,:,:,:)
+    complex(8), allocatable :: tHlambda(:,:,:,:)
+
+    real(8) :: p(2)
+    real(8) :: dS_dlambda(2,2)
+    real(8) :: dvph_dlambda
+    real(8) :: dA_dlambda(2)
+
+    integer :: layer1, layer2
+    integer :: n1, n2
+
+    complex(8) :: M(2,2)
+    complex(8) :: Mx(2,2), My(2,2)
+
+    
+    ! ----------
+    ! 判断是否需要计算dH_dlambda
+    ! ----------
+    if (present(dH_dlambda)) then
+        ! ----- derivatives of pesudofields and strain tensor ----- 
+        call PSEUDOFIELDS_DERIVATIVES(strain_epsilon, strain_phi, lambda_name, &
+                                    dS_dlambda, dvph_dlambda, dA_dlambda)
+        allocate(tHlambda(NTBG, NTBG, 2, 2))
+        tHlambda = 0.d0
+    end if
+
+
+    ! ----------
+    ! dH/dkx  = hbar vF sigma_1
+    ! dH/dky = hbar vF sigma_2
+    ! ----------
+    call DIAGONAL([vF, 0.d0], Mx)
+    call DIAGONAL([0.d0, vF], My)
+
+    ! ----- allocate ----- 
+    allocate(tHx(NTBG, NTBG, 2, 2))
+    allocate(tHy(NTBG, NTBG, 2, 2))
+    
+
+    ! ----- 初始化 ----- 
+    tHx = 0.d0
+    tHy = 0.d0
+
+    !$OMP PARALLEL DO DEFAULT(NONE) &
+    !$OMP PRIVATE(layer1,layer2,n1,n2,p,M) &
+    !$OMP SHARED(dS_dlambda,dA_dlambda,dvph_dlambda,Mx,My,tHx,tHy,tHlambda) &
+    !$OMP COLLAPSE(4) SCHEDULE(dynamic)
+    do layer1 = 1, 2
+        do layer2 = 1, 2
+            do n1 = -tr, tr
+                do n2 = -tr, tr
+                    ! bottom layer
+                    if (layer1 == 1 .and. layer2 == 1) then
+                        p = K_graphene + n1*b_graphene(:,1) + n2*b_graphene(:,2)
+                        call DIAGONAL(-vF*matmul(dS_dlambda, p) - gamma_vF*dA_dlambda, M)
+                        M = M - alpha * dvph_dlambda*sigma_0
+                        call ELEMENTS(tHlambda, layer1, n1, n2, layer2, n1, n2, M)
+                        ! ----- dH_bot/dkx, dH_bot/dky ----- 
+                        call ELEMENTS(tHx, layer1, n1, n2, layer2, n1, n2, Mx)
+                        call ELEMENTS(tHy, layer1, n1, n2, layer2, n1, n2, My)
+                    ! top layer
+                    else if (layer1 == 2 .and. layer2 == 2) then 
+                        p = n1*b_graphene(:,1) + n2*b_graphene(:,2)
+                        call DIAGONAL(-vF*matmul(dS_dlambda, p) + gamma_vF*dA_dlambda, M)
+                        M = M + alpha * dvph_dlambda*sigma_0
+                        call ELEMENTS(tHlambda, layer1, n1, n2, layer2, n1, n2, M)
+                        ! ----- dH_top/dkx, dH_top/dky ----- 
+                        call ELEMENTS(tHx, layer1, n1, n2, layer2, n1, n2, Mx)
+                        call ELEMENTS(tHy, layer1, n1, n2, layer2, n1, n2, My)
+                    end if
+
+                enddo
+            enddo
+        enddo
+    enddo
+
+    !$OMP END PARALLEL DO
+
+    ! ----- Assemble full derivative Hamiltonians -----
+    dH_dkx = 0.d0
+    dH_dky = 0.d0
+    dH_dlambda = 0.d0
+
+    call ASMBL(NTBG, dH_dkx, tHx)
+    call ASMBL(NTBG, dH_dky, tHy)
+    
+    if (present(dH_dlambda)) then
+        dH_dlambda = (0.d0,0.d0)
+        call ASMBL(NTBG, dH_dlambda, tHlambda)
+        deallocate(tHlambda)
+    endif
+
+    ! ----- 释放数组 ----- 
+    deallocate(tHx, tHy)
+
+end subroutine H_STRAIN_DERIVATIVES
+
+
+! ==========
+! Strain Hamiltonian derivatives interface
+! lambda = strain_epsilon
+! ==========
+subroutine HAM_DERIVATIVES_STRAIN_EPSILON(k, ham_param, dH_dkx, dH_dky, dH_dlambda)
+    implicit none
+    
+    real(8), intent(in) :: k(2) 
+    real(8), intent(in) :: ham_param(:)
+
+    complex(8), intent(out) :: dH_dkx(:,:), dH_dky(:,:)
+    complex(8), intent(out), optional ::  dH_dlambda(:,:)
+
+    call H_STRAIN_DERIVATIVES(ham_param(2), ham_param(3), 'strain_epsilon', &
+                              dH_dkx, dH_dky, dH_dlambda)
+
+end subroutine HAM_DERIVATIVES_STRAIN_EPSILON
+
+
+! ==========
+! Strain Hamiltonian derivatives interface
+! lambda = strain_phi   
+! ==========
+subroutine HAM_DERIVATIVES_STRAIN_PHI(k, ham_param, dH_dkx, dH_dky, dH_dlambda)
+    implicit none
+    
+    real(8), intent(in) :: k(2) 
+    real(8), intent(in) :: ham_param(:)
+
+    complex(8), intent(out) :: dH_dkx(:,:), dH_dky(:,:)
+    complex(8), intent(out) :: dH_dlambda(:,:)
+
+    call H_STRAIN_DERIVATIVES(ham_param(2), ham_param(3), 'strain_phi', &
+                              dH_dkx, dH_dky, dH_dlambda)
+
+end subroutine HAM_DERIVATIVES_STRAIN_PHI
+
 
 end module STRAIN

@@ -1,0 +1,10 @@
+# TBG under heterostrain in-plane orbital magnetization
+# theta_deg =     1.400000
+# mu_meV =     0.000000
+# nk = 80
+# ncut = 80
+# delta =   1.00000000E-03
+# epsilon_fixed_percent =     0.000000
+# phi_fixed_deg =    30.000000
+# epsilon(%) phi(deg) Mx(mu_B/cell) My(mu_B/cell)
+         0.0000000000000000E+000         2.9999999999999996E+001        -4.1147203878673220E-004        -3.4565693607204541E-005
