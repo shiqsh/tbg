@@ -304,12 +304,14 @@ subroutine H_STRAIN_DERIVATIVES(strain_epsilon, strain_phi, lambda_name,&
 
     complex(8) :: M(2,2)
     complex(8) :: Mx(2,2), My(2,2)
+    logical :: need_lambda
 
     
     ! ----------
     ! 判断是否需要计算dH_dlambda
     ! ----------
-    if (present(dH_dlambda)) then
+    need_lambda = present(dH_dlambda)
+    if (need_lambda) then
         ! ----- derivatives of pesudofields and strain tensor ----- 
         call PSEUDOFIELDS_DERIVATIVES(strain_epsilon, strain_phi, lambda_name, &
                                     dS_dlambda, dvph_dlambda, dA_dlambda)
@@ -336,7 +338,7 @@ subroutine H_STRAIN_DERIVATIVES(strain_epsilon, strain_phi, lambda_name,&
 
     !$OMP PARALLEL DO DEFAULT(NONE) &
     !$OMP PRIVATE(layer1,layer2,n1,n2,p,M) &
-    !$OMP SHARED(dS_dlambda,dA_dlambda,dvph_dlambda,Mx,My,tHx,tHy,tHlambda) &
+    !$OMP SHARED(dS_dlambda,dA_dlambda,dvph_dlambda,Mx,My,tHx,tHy,tHlambda,need_lambda) &
     !$OMP COLLAPSE(4) SCHEDULE(dynamic)
     do layer1 = 1, 2
         do layer2 = 1, 2
@@ -344,19 +346,23 @@ subroutine H_STRAIN_DERIVATIVES(strain_epsilon, strain_phi, lambda_name,&
                 do n2 = -tr, tr
                     ! bottom layer
                     if (layer1 == 1 .and. layer2 == 1) then
-                        p = K_graphene + n1*b_graphene(:,1) + n2*b_graphene(:,2)
-                        call DIAGONAL(-vF*matmul(dS_dlambda, p) - gamma_vF*dA_dlambda, M)
-                        M = M - alpha * dvph_dlambda*sigma_0
-                        call ELEMENTS(tHlambda, layer1, n1, n2, layer2, n1, n2, M)
+                        if (need_lambda) then
+                            p = K_graphene + n1*b_graphene(:,1) + n2*b_graphene(:,2)
+                            call DIAGONAL(-vF*matmul(dS_dlambda, p) - gamma_vF*dA_dlambda, M)
+                            M = M - alpha * dvph_dlambda*sigma_0
+                            call ELEMENTS(tHlambda, layer1, n1, n2, layer2, n1, n2, M)
+                        endif
                         ! ----- dH_bot/dkx, dH_bot/dky ----- 
                         call ELEMENTS(tHx, layer1, n1, n2, layer2, n1, n2, Mx)
                         call ELEMENTS(tHy, layer1, n1, n2, layer2, n1, n2, My)
                     ! top layer
                     else if (layer1 == 2 .and. layer2 == 2) then 
-                        p = n1*b_graphene(:,1) + n2*b_graphene(:,2)
-                        call DIAGONAL(-vF*matmul(dS_dlambda, p) + gamma_vF*dA_dlambda, M)
-                        M = M + alpha * dvph_dlambda*sigma_0
-                        call ELEMENTS(tHlambda, layer1, n1, n2, layer2, n1, n2, M)
+                        if (need_lambda) then
+                            p = n1*b_graphene(:,1) + n2*b_graphene(:,2)
+                            call DIAGONAL(-vF*matmul(dS_dlambda, p) + gamma_vF*dA_dlambda, M)
+                            M = M + alpha * dvph_dlambda*sigma_0
+                            call ELEMENTS(tHlambda, layer1, n1, n2, layer2, n1, n2, M)
+                        endif
                         ! ----- dH_top/dkx, dH_top/dky ----- 
                         call ELEMENTS(tHx, layer1, n1, n2, layer2, n1, n2, Mx)
                         call ELEMENTS(tHy, layer1, n1, n2, layer2, n1, n2, My)
@@ -372,7 +378,6 @@ subroutine H_STRAIN_DERIVATIVES(strain_epsilon, strain_phi, lambda_name,&
     ! ----- Assemble full derivative Hamiltonians -----
     dH_dkx = 0.d0
     dH_dky = 0.d0
-    dH_dlambda = 0.d0
 
     call ASMBL(NTBG, dH_dkx, tHx)
     call ASMBL(NTBG, dH_dky, tHy)
@@ -419,7 +424,7 @@ subroutine HAM_DERIVATIVES_STRAIN_PHI(k, ham_param, dH_dkx, dH_dky, dH_dlambda)
     real(8), intent(in) :: ham_param(:)
 
     complex(8), intent(out) :: dH_dkx(:,:), dH_dky(:,:)
-    complex(8), intent(out) :: dH_dlambda(:,:)
+    complex(8), intent(out), optional :: dH_dlambda(:,:)
 
     call H_STRAIN_DERIVATIVES(ham_param(2), ham_param(3), 'strain_phi', &
                               dH_dkx, dH_dky, dH_dlambda)

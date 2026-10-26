@@ -2,7 +2,7 @@ module OM_CUTOFF
     use CONSTANTS, only : PI
     use LINALG, only : myzheev
     use stdlib_linalg, only : diag
-    use MODEL_INTERFACE, only : HAMILTONIAN， H_DERIVATIVES_INTERFACE
+    use MODEL_INTERFACE, only : HAMILTONIAN, H_DERIVATIVES_INTERFACE
     use OM, only : BUILD_Z
     implicit none
 
@@ -533,11 +533,11 @@ end subroutine CALCULATE_OM_CUTOFF_MU
 ! ==========
 ! 直接通过本征态求轨道磁化
 ! ==========
-subroutine CALCULATE_OM_CUTOFF_KET(N, nk, ncut, b1, b2, mu, prefactor, zdiag, ham_param, HAM, &
+subroutine CALCULATE_OM_CUTOFF_KET(N, nk, ncut, b1, b2, mu, prefactor, zdiag, ham_param, HAM, H_DERIVATIVES, &
                                     Mx, My)
     implicit none
     
-    integer, intent(in) :: N
+    integer, intent(in) :: N 
     integer, intent(in) :: nk
     integer, intent(in) :: ncut
 
@@ -548,7 +548,7 @@ subroutine CALCULATE_OM_CUTOFF_KET(N, nk, ncut, b1, b2, mu, prefactor, zdiag, ha
     real(8), intent(in) :: ham_param(:)
 
     procedure(HAMILTONIAN) :: HAM
-    procedure(H_DERIVATIVES_INTERFACE): H_DERIVATIVES
+    procedure(H_DERIVATIVES_INTERFACE):: H_DERIVATIVES
 
     real(8), intent(out) :: Mx, My
 
@@ -579,12 +579,120 @@ subroutine CALCULATE_OM_CUTOFF_KET(N, nk, ncut, b1, b2, mu, prefactor, zdiag, ha
     ! ----- rep matrix ----- 
     complex(8), allocatable :: Hx_e(:,:)   ! <n|dH/dkx|m>
     complex(8), allocatable :: Hy_e(:,:)   ! <n|dH/dky|m>
-    complex(8), allocatable :: z(:,:)
+    complex(8), allocatable :: z_e(:,:)
 
+    ! ----------
+    ! dimension check
+    ! ----------
+    if (N < 2 .or. mod(N,2) /= 0) error stop 'OM_KET: invalid N'
+    if (nk <= 0) error stop 'OM_KET: invalid nk'
+    if (ncut < 0 .or. ncut > N/2-1) error stop 'OM_KET: invalid ncut'
 
+    ! ----- band indices ----- 
+    iv = N/2
+    ic = iv + 1
 
+    ilow = iv - ncut
+    ihigh = ic + ncut
 
+    nb = ihigh - ilow + 1
 
+    ! ----- 积分权重 ----- 
+    weight = 1.d0/real(nk*nk, 8)
+
+    ! ----- 初始化 ----- 
+    sumFx = 0.d0
+    sumFy = 0.d0
+
+    ! ----- 解析的导数矩阵 ----- 
+    allocate(dH_dkx(N, N), dH_dky(N, N))
+    kref = [0.d0, 0.d0]
+
+    call H_DERIVATIVES(kref, ham_param, dH_dkx, dH_dky)
+
+    ! ==========
+    ! BZ积分
+    ! ==========
+    !$OMP PARALLEL DEFAULT(NONE) &
+    !$OMP SHARED(N,nk,nb,iv,ic,ilow,ihigh,b1,b2,mu,zdiag,ham_param,dH_dkx,dH_dky) &
+    !$OMP PRIVATE(ik1,ik2,iband,jband,i,j,icol,noccA,ilast,u,v,k) &
+    !$OMP PRIVATE(denominator,gap_tol,factor,Fx,Fy) &
+    !$OMP PRIVATE(W,H0,V0,Vcut,Temp,Hx_e,Hy_e,z_e) &
+    !$OMP REDUCTION(+:sumFx,sumFy)
+
+    ! ----- 声明数组大小 ----- 
+    allocate(W(N))
+    allocate(H0(N,N), V0(N,N))
+    allocate(Vcut(N,nb), Temp(N,nb))
+    allocate(Hx_e(nb,nb), Hy_e(nb,nb), z_e(nb,nb))
+
+    !$OMP DO COLLAPSE(2) SCHEDULE(DYNAMIC)
+    do ik1 = 1, nk
+        do ik2 = 1, nk
+
+            u = -0.5d0 + real(ik1-1,8)/real(nk,8)
+            v = -0.5d0 + real(ik2-1,8)/real(nk,8)
+
+            k = u*b1 + v*b2
+
+            call HAM(k, ham_param, H0)
+            call myzheev(N, W, H0, V0)
+
+            ! ----- 简并上限 -----  
+            gap_tol = 100.d0*epsilon(1.d0)*maxval(abs(W))
+
+            ! ----------
+            ! 提取占据能带
+            ! ----------
+            noccA = count(W(iv:ic) < mu)
+            ilast = iv + noccA - 1
+            Vcut = V0(:,ilow:ihigh)
+            
+            ! ----- 表示矩阵 ----- 
+            Hx_e = matmul(conjg(transpose(Vcut)), matmul(dH_dkx, Vcut))
+            Hy_e = matmul(conjg(transpose(Vcut)), matmul(dH_dky, Vcut))
+
+            do icol = 1, nb
+                Temp(:,icol) = zdiag*Vcut(:,icol)
+            enddo
+            z_e = matmul(conjg(transpose(Vcut)), Temp)
+
+            Fx = 0.d0
+            Fy = 0.d0
+            
+            do iband = ilow, ilast
+                i = iband - ilow + 1
+                do jband = ilast + 1, ihigh
+                    j = jband - ilow + 1
+                    
+                    denominator = W(iband) - W(jband) 
+                    ! ----- 简并检查 ----- 
+                    if (abs(denominator) <= gap_tol) then
+                        error stop 'OM_KET: occupied-empty degeneracy'
+                    endif
+
+                    factor = (W(iband)+W(jband)-2.d0*mu)/denominator
+
+                    Fx = Fx + factor*real(Hx_e(i,j)*z_e(j,i),8)
+                    Fy = Fy + factor*real(Hy_e(i,j)*z_e(j,i),8)
+                enddo
+            enddo
+            ! ----- 累加 ----- 
+            sumFx = sumFx + Fx
+            sumFy = sumFy + Fy
+        enddo
+    enddo
+    !$OMP END DO
+
+    deallocate(W,H0,V0,Vcut,Temp,Hx_e,Hy_e,z_e)
+    !$OMP END PARALLEL
+
+    Mx = -prefactor*weight*sumFy
+    My =  prefactor*weight*sumFx
+
+    deallocate(dH_dkx,dH_dky)
+
+end subroutine CALCULATE_OM_CUTOFF_KET
 
 
 end module OM_CUTOFF

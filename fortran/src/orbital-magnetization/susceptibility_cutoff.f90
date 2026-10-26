@@ -4,7 +4,7 @@ module SUSCEPTIBILITY_CUTOFF
     use LINALG, only : myzheev
     use stdlib_linalg, only : diag, hermitian
     use SUSCEPTIBILITY, only : GAUSSIAN_DELTA
-    use OM_CUTOFF, only : CALCULATE_OM_CUTOFF
+    use OM_CUTOFF, only : CALCULATE_OM_CUTOFF, CALCULATE_OM_CUTOFF_KET
     implicit none
     
 contains
@@ -449,8 +449,8 @@ subroutine M_FROM_CHI_CUTOFF(N, nk, ncut, b1, b2, delta, mu, prefactor, zdiag, &
     ! calculate the reference OM
     ! M_ref = M_{lambda_list(1)}
     ! ----------
-    call CALCULATE_OM_CUTOFF(N,nk,ncut,b1,b2,delta,mu,prefactor,zdiag, &
-    ham_param_ref,HAM,Mx_ref,My_ref)
+    call CALCULATE_OM_CUTOFF(N,nk,ncut,b1,b2, delta, mu,prefactor,zdiag, &
+    ham_param_ref,HAM, Mx_ref,My_ref)
 
     ! -----
     ! initial point
@@ -472,6 +472,71 @@ subroutine M_FROM_CHI_CUTOFF(N, nk, ncut, b1, b2, delta, mu, prefactor, zdiag, &
     enddo
 
 end subroutine M_FROM_CHI_CUTOFF
+
+! ==========
+! Integrated the susceptibility(CUTOFF)
+! ==========
+subroutine M_FROM_CHI_CUTOFF_KET(N, nk, ncut, b1, b2, mu, prefactor, zdiag, &
+                            ham_param_ref, HAM, H_DERIVATIVES, lambda_list, chi_x, chi_y, &
+                            Mx_from_chi, My_from_chi)
+    implicit none
+    
+    integer, intent(in) :: N, nk, ncut
+    real(8), intent(in) :: b1(2), b2(2)
+    real(8), intent(in) :: mu, prefactor
+    real(8), intent(in) :: zdiag(N)
+    real(8), intent(in) :: ham_param_ref(:)
+
+    procedure(HAMILTONIAN) :: HAM
+    procedure(H_DERIVATIVES_INTERFACE) :: H_DERIVATIVES
+
+    real(8), intent(in) :: lambda_list(:)
+    real(8), intent(in) :: chi_x(:), chi_y(:)
+
+    real(8), intent(out) :: Mx_from_chi(:)
+    real(8), intent(out) :: My_from_chi(:)
+
+    integer :: i
+    integer :: nlambda
+    real(8) :: dlambda
+    real(8) :: Mx_ref, My_ref
+    
+    ! ----- Array dimension checks -----
+    nlambda = size(lambda_list)
+
+    if (nlambda < 1) error stop 'M_FROM_CHI_CUTOFF: empty lambda_list'
+    if (size(chi_x) /= nlambda .or. size(chi_y) /= nlambda) &
+        error stop 'M_FROM_CHI_CUTOFF: input chi dimensions mismatch'
+    if (size(Mx_from_chi) /= nlambda .or. size(My_from_chi) /= nlambda) &
+        error stop 'M_FROM_CHI_CUTOFF: output M dimensions mismatch'
+
+    ! ----------
+    ! calculate the reference OM
+    ! M_ref = M_{lambda_list(1)}
+    ! ----------
+    call CALCULATE_OM_CUTOFF_KET(N,nk,ncut,b1,b2,mu,prefactor,zdiag, &
+    ham_param_ref,HAM, H_DERIVATIVES, Mx_ref,My_ref)
+
+    ! -----
+    ! initial point
+    ! M(lambda_1) = M_ref
+    ! -----
+    Mx_from_chi(1) = Mx_ref
+    My_from_chi(1) = My_ref
+
+    ! -----
+    ! 积分
+    ! -----
+    do i = 2, nlambda
+
+        dlambda = lambda_list(i) - lambda_list(i-1)
+
+        Mx_from_chi(i) = Mx_from_chi(i-1) + 0.5d0*(chi_x(i) + chi_x(i-1))*dlambda
+        My_from_chi(i) = My_from_chi(i-1) + 0.5d0*(chi_y(i) + chi_y(i-1))*dlambda
+
+    enddo
+
+end subroutine M_FROM_CHI_CUTOFF_KET
 
 
 end module SUSCEPTIBILITY_CUTOFF

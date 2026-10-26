@@ -76,7 +76,7 @@ subroutine H_DERIVATIVES_QWZ(k, lambda, dH_dkx, dH_dky, dH_dlambda)
 
     complex(8), intent(out) :: dH_dkx(:,:)
     complex(8), intent(out) :: dH_dky(:,:)
-    complex(8), intent(out) :: dH_dlambda(:,:)
+    complex(8), intent(out), optional :: dH_dlambda(:,:)
 
     real(8) :: kt(2), kb(2)
     complex(8) :: tHx(2,2,2,2), tHy(2,2,2,2), tHlambda(2,2,2,2)
@@ -86,7 +86,10 @@ subroutine H_DERIVATIVES_QWZ(k, lambda, dH_dkx, dH_dky, dH_dlambda)
 
     tHx = (0.d0, 0.d0)
     tHy = (0.d0, 0.d0)
-    tHlambda = (0.d0, 0.d0)
+
+    if (present(dH_dlambda)) then 
+        tHlambda = (0.d0, 0.d0)
+    end if
 
     ! -----
     ! dH/dkx
@@ -98,15 +101,19 @@ subroutine H_DERIVATIVES_QWZ(k, lambda, dH_dkx, dH_dky, dH_dlambda)
     ! -----
     tHy(1,1,:,:) = cos(kt(2))*sigma_2 - sin(kt(2))*sigma_3
     tHy(2,2,:,:) = cos(kb(2))*sigma_2 - sin(kb(2))*sigma_3
-    ! -----
-    ! dH/dlambda
-    ! -----
-    tHlambda(1,1,:,:) = cos(kt(1))*sigma_1 - sin(kt(1))*sigma_3
-    tHlambda(2,2,:,:) = -cos(kb(1))*sigma_1 + sin(kb(1))*sigma_3
 
     call ASMBL(2, dH_dkx, tHx)
     call ASMBL(2, dH_dky, tHy)
-    call ASMBL(2, dH_dlambda, tHlambda)
+
+    ! -----
+    ! dH/dlambda
+    ! -----
+    if (present(dH_dlambda)) then 
+        tHlambda(1,1,:,:) = cos(kt(1))*sigma_1 - sin(kt(1))*sigma_3
+        tHlambda(2,2,:,:) = -cos(kb(1))*sigma_1 + sin(kb(1))*sigma_3
+
+        call ASMBL(2, dH_dlambda, tHlambda)
+    end if
     
 end subroutine H_DERIVATIVES_QWZ
 
@@ -120,7 +127,8 @@ subroutine HAM_DERIVATIVES_QWZ(k, ham_param, dH_dkx, dH_dky, dH_dlambda)
     real(8), intent(in) :: k(2)
     real(8), intent(in) :: ham_param(:)
 
-    complex(8), intent(out) :: dH_dkx(:,:), dH_dky(:,:), dH_dlambda(:,:)
+    complex(8), intent(out) :: dH_dkx(:,:), dH_dky(:,:)
+    complex(8), intent(out), optional ::  dH_dlambda(:,:)
 
     real(8) :: lambda, m, t_perp
 

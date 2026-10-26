@@ -2,8 +2,8 @@ program TBG_STRAIN_CHI
     use CONSTANTS, only : PI, m_e, hbar, NTBG, eV
     use TBG, only : Z_TBG
     use STRAIN, only : HAM_STRAIN, GEOMETRY_STRAIN, HAM_DERIVATIVES_STRAIN_EPSILON,HAM_DERIVATIVES_STRAIN_PHI
-    use OM_CUTOFF, only : CALCULATE_OM_CUTOFF
-    use SUSCEPTIBILITY_CUTOFF, only : CALCULATE_CHI_CUTOFF, M_FROM_CHI_CUTOFF
+    use OM_CUTOFF, only :  CALCULATE_OM_CUTOFF_KET
+    use SUSCEPTIBILITY_CUTOFF, only : CALCULATE_CHI_CUTOFF, M_FROM_CHI_CUTOFF, M_FROM_CHI_CUTOFF_KET
     use stdlib_math, only : linspace
     use CHI_CHECKPOINT, only : LOAD_CHI_CHECKPOINT, CREATE_CHI_CHECKPOINT, APPEND_CHI_POINT
     use, intrinsic :: iso_fortran_env, only : output_unit
@@ -61,13 +61,13 @@ program TBG_STRAIN_CHI
     ! 可变参数
     ! ----------
     ! ----- 化学势与高斯展宽 ----- 
-    mu = 0.d0
-    eta = (0.5d0)*1.d-3*eV  
+    mu = (0.5d0)*1.d-3*eV
+    eta = (0.25d0)*1.d-3*eV  
 
     ! ----- 截断与mesh ----- 
     delta = 1.d-4 ! 中心差分步长
-    ncut = 80
-    nk = 41 ! 这里需要用奇数
+    ncut = 120
+    nk = 40! 这里需要用奇数 for mu = 0, but odd nk does not satisfy the C3 symmetry, 
 
     ! BLAS thread limiting and idle-sleep protection are supplied by run_tbg_chi_safe.sh.
     ! Keep nested OpenMP regions serial; the outer k mesh remains parallel.
@@ -128,8 +128,8 @@ program TBG_STRAIN_CHI
     ie_start = 1
     ie_end = size(epsilon_list)
 
-    ip_start = 31
-    ip_end = 31
+    ip_start = 21
+    ip_end = 21
 
     ! ----------
     ! 固定 epsilon 0.1%, 扫描phi
@@ -335,8 +335,8 @@ program TBG_STRAIN_CHI
         write(*,'(A,I0,A,F12.2,A)') 'point ', ilambda, ': CHI done after ', &
             omp_get_wtime()-point_started, ' s; OM starting'
         flush(output_unit)
-        call CALCULATE_OM_CUTOFF(N, nk, ncut, bs(:,1), bs(:,2), delta_h, mu, prefactor, &
-        zdiag, ham_param, HAM_STRAIN, Mx_OM(ilambda), My_OM(ilambda))
+        call CALCULATE_OM_CUTOFF_KET(N, nk, ncut, bs(:,1), bs(:,2), mu, prefactor, zdiag, ham_param, &
+                                    HAM_STRAIN, HAM_DERIVATIVES_STRAIN_PHI, Mx_OM(ilambda), My_OM(ilambda))
 
         ! Flush all eight computed quantities before printing "point completed".
         call APPEND_CHI_POINT(checkpoint_unit, ilambda, &
@@ -364,16 +364,28 @@ program TBG_STRAIN_CHI
     ! 计算重构的轨道磁矩
     ! ==========
     if (scan_parameter == 'strain_epsilon') then
-        call M_FROM_CHI_CUTOFF(N, nk, ncut, bs_ref(:,1), bs_ref(:,2), delta_h_ref, &
-                               mu, prefactor, zdiag, ham_param_ref, HAM_STRAIN, &
+        call M_FROM_CHI_CUTOFF_KET(N, nk, ncut, bs_ref(:,1), bs_ref(:,2), mu, prefactor, & 
+                               zdiag, ham_param_ref, HAM_STRAIN, HAM_DERIVATIVES_STRAIN_PHI, &
                                epsilon_list(ie_start:ie_end), chi_tot_x, chi_tot_y, &
                                Mx_from_chi, My_from_chi)
     else
-        call M_FROM_CHI_CUTOFF(N, nk, ncut, bs_ref(:,1), bs_ref(:,2), delta_h_ref, &
-                               mu, prefactor, zdiag, ham_param_ref, HAM_STRAIN, &
+        call M_FROM_CHI_CUTOFF_KET(N, nk, ncut, bs_ref(:,1), bs_ref(:,2), mu, prefactor, &
+                               zdiag, ham_param_ref, HAM_STRAIN,  HAM_DERIVATIVES_STRAIN_PHI, &
                                phi_list(ip_start:ip_end), chi_tot_x, chi_tot_y, &
                                Mx_from_chi, My_from_chi)
     endif
+    ! if (scan_parameter == 'strain_epsilon') then
+    !     call M_FROM_CHI_CUTOFF(N, nk, ncut, bs_ref(:,1), bs_ref(:,2), delta_h_ref, mu, prefactor, & 
+    !                            zdiag, ham_param_ref, HAM_STRAIN, &
+    !                            epsilon_list(ie_start:ie_end), chi_tot_x, chi_tot_y, &
+    !                            Mx_from_chi, My_from_chi)
+    ! else
+    !     call M_FROM_CHI_CUTOFF(N, nk, ncut, bs_ref(:,1), bs_ref(:,2), delta_h_ref, mu, prefactor, &
+    !                            zdiag, ham_param_ref, HAM_STRAIN, &
+    !                            phi_list(ip_start:ip_end), chi_tot_x, chi_tot_y, &
+    !                            Mx_from_chi, My_from_chi)
+    ! endif
+
 
     ! ==========
     ! 输出结果
