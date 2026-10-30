@@ -16,7 +16,8 @@ implicit-external = true
 source-form = "free"
 
 [dependencies]
-stdlib = "*"
+# stdlib = "*"
+stdlib = { path = "vendor/stdlib" }
 openmp = "*"
 blas = "*"
 

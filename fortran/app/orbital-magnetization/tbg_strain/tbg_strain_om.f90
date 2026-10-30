@@ -61,7 +61,7 @@ program TBG_STRAIN_OM
     ! strian paramter
     ! -----
     epsilon_list = linspace(0.d0, 2.d-3, 21)
-    phi_list = linspace(0.d0, PI, 181)
+    phi_list = linspace(0.d0, PI, 21)
 
     ! =====
     ! 选择扫描范围
@@ -71,11 +71,11 @@ program TBG_STRAIN_OM
     ! ----------
     ! 固定phi = 90 deg, 扫描epsilon
     ! ----------
-    ie_start = 1
-    ie_end = size(epsilon_list)
+    ie_start = 11
+    ie_end = 11
 
-    ip_start = 21
-    ip_end = 21
+    ip_start = 1
+    ip_end = size(phi_list)
     ! ----- 检查索引 ----- 
     if (ie_start < 1 .or. ie_end > size(epsilon_list) &
         .or. ie_start > ie_end) then

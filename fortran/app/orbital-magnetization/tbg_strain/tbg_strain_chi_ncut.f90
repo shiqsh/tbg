@@ -4,7 +4,7 @@ program TBG_STRAIN_CHI_NCUT
     use STRAIN, only : HAM_STRAIN, GEOMETRY_STRAIN, &
                         HAM_DERIVATIVES_STRAIN_EPSILON, &
                         HAM_DERIVATIVES_STRAIN_PHI
-    use OM_CUTOFF, only : CALCULATE_OM_CUTOFF_KET
+    use OM_CUTOFF, only : CALCULATE_OM_CUTOFF_KET, CALCULATE_OM_CUTOFF
     use SUSCEPTIBILITY_CUTOFF, only : CALCULATE_CHI_CUTOFF
     use stdlib_math, only : linspace
     use, intrinsic :: iso_fortran_env, only : output_unit !明确指定输出到标准输出
@@ -25,7 +25,7 @@ program TBG_STRAIN_CHI_NCUT
 
     ! ----- 几何参数 ----- 
     real(8) :: theta, strain_epsilon, strain_phi
-    real(8) :: mu, eta, d, prefactor
+    real(8) :: mu, eta, d, prefactor, delta, delta_h
 
     ! ----- BZ和哈密顿量参数 -----
     real(8) :: bs(2, 2)
@@ -60,10 +60,11 @@ program TBG_STRAIN_CHI_NCUT
     mu             = 0.5d-3*eV        ! 0.5 meV
     eta            = 0.25d-3*eV
     prefactor = 2.d0*m_e/hbar**2
+    delta = 1.d-4
 
     ! ----- BZ mesh and cut ----- 
     nk = 40
-    ncut_list = nint(linspace(20.d0, 160.d0, 8))
+    ncut_list = nint(linspace(20.d0, 160.d0, 15))
 
     ! ==========
     ! 输入参数与截断检查
@@ -80,7 +81,7 @@ program TBG_STRAIN_CHI_NCUT
 
     ! ----- 极化率响应参数检查 -----
     if (response_parameter /= 'strain_epsilon' .and. &
-        response_parameter /= 'strain_phi') then
+        response_parameter /= 'strai——n_phi') then
         error stop 'TBG_STRAIN_CHI_NCUT: invalid response parameter'
     endif
     
@@ -96,6 +97,8 @@ program TBG_STRAIN_CHI_NCUT
 
     ! ----- BZ geometry ----- 
     call GEOMETRY_STRAIN(theta, strain_epsilon, strain_phi, bs )
+
+    delta_h = delta*(norm2(bs(:,1)))
 
     ! ----- 层间位置算符 -----
     call Z_TBG(d, zdiag)
@@ -126,7 +129,7 @@ program TBG_STRAIN_CHI_NCUT
 
     ! ----- 新建文件，禁止覆盖 -----
     open(newunit=fileunit, file=trim(filename), &
-        status='new', action='write', iostat=ios)
+        status='replace', action='write', iostat=ios)
 
     if (ios /= 0) then
         error stop 'TBG_STRAIN_CHI_NCUT: cannot create output file'
@@ -229,10 +232,13 @@ program TBG_STRAIN_CHI_NCUT
         ! ----------
         ! ----- ket OM 只使用 Hx = dH/dkx、Hy = dH/dky -----
         ! ----- H_lambda 不参与直接 OM 的计算 -----
-        call CALCULATE_OM_CUTOFF_KET(N, nk, ncut, bs(:,1), bs(:,2), &
-                                     mu, prefactor, zdiag, ham_param, &
-                                     HAM_STRAIN, HAM_DERIVATIVES_STRAIN_EPSILON, &
-                                     Mx, My)
+        ! call CALCULATE_OM_CUTOFF_KET(N, nk, ncut, bs(:,1), bs(:,2), &
+        !                              mu, prefactor, zdiag, ham_param, &
+        !                              HAM_STRAIN, HAM_DERIVATIVES_STRAIN_EPSILON, &
+        !                              Mx, My)
+        call CALCULATE_OM_CUTOFF(N, nk, ncut, bs(:,1), bs(:,2), &
+                                delta_h, mu, prefactor, zdiag, ham_param, HAM_STRAIN, & 
+                                Mx, My)
 
         ! ----------
         ! 保存结果

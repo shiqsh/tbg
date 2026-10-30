@@ -55,7 +55,7 @@ module CONSTANTS
 ! ------
 ! wavefunction truncation
 ! -----
-    integer, parameter :: tr = 4
+    integer, parameter :: tr = 5
     integer, parameter :: NTBG  = 2*((2*tr + 1)**2)
 
 
