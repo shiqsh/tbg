@@ -57,6 +57,7 @@ module CONSTANTS
 ! -----
     integer, parameter :: tr = 5
     integer, parameter :: NTBG  = 2*((2*tr + 1)**2)
+    integer, parameter :: NC3 = 12*tr*(tr + 1) + 2
 
 
 end module CONSTANTS

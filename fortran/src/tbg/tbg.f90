@@ -308,4 +308,203 @@ subroutine MOIRE_BZ_SCALE(theta, l)
 end subroutine MOIRE_BZ_SCALE
 
 
+! ==========
+! C3 symmetric Hamiltonian 
+! 在对动量的正方形截断上把满足C3的basis挑出来
+! ==========
+subroutine HTBG_C3(k, te, theta, H)
+    implicit none
+    
+    real(8), intent(in) :: k(2), te, theta
+    complex(8), intent(out) :: H(:,:)
+
+    ! ----- C3 对称基底的索引映射 -----
+    integer :: idx(2 , -tr:tr , -tr:tr)
+
+    integer :: layer, n1, n2
+
+    real(8) :: p(2)
+    real(8) :: q1(2), q2(2), q3(2)
+    real(8) :: g1(2), g2(2)
+
+    complex(8) :: M(2, 2)
+    
+    ! ----------
+    ! 检查C3的维度
+    ! ----------
+    if (size(H,1) /= NC3 .or. size(H,2) /= NC3) then
+        error stop 'HTBG_C3: Hamiltonian dimension error'
+    endif
+
+    ! =====
+    ! 构造C3 对称的平面波基底   
+    ! idx(layer,n1,n2) = 0 表示该基底被排除
+    ! idx(layer,n1,n2) > 0 表示对应的矩阵块编号
+    ! =====
+    call BUILD_C3_INDEX(idx)
+
+    ! ----------
+    ! moire reciprocal vectors
+    ! ----------
+    call VECTORS(theta, q1, q2, q3, g1, g2)
+
+    ! ----- 初始化哈密顿量 ----- 
+    H = (0.d0, 0.d0)
+
+    ! =====
+    ! 构造哈密顿量
+    ! =====
+    !$OMP PARALLEL DO DEFAULT(NONE) &
+    !$OMP PRIVATE(layer,n1,n2,p,M) &
+    !$OMP SHARED(k,te,q1,g1,g2,idx,H) &
+    !$OMP COLLAPSE(3) SCHEDULE(DYNAMIC)
+
+    do layer = 1, 2
+        do n1 = -tr, tr
+            do n2 = -tr, tr
+
+                ! ----- check the C3 basis ----- 
+                if(idx(layer, n1, n2) == 0) cycle
+
+                if (layer == 1) then
+                    ! ----- bottom ----- 
+                    p = k - q1 - n1*g1 - n2*g2
+                    call HSLG(p, te/2.d0, M)
+                    call SET_C3_BLOCK(H, idx, layer, n1, n2, layer, n1, n2, M)
+                    ! ----- interlayer tunneling ----- 
+                    call SET_C3_BLOCK(H, idx, 1, n1, n2, 2, n1, n2, T1) ! T1
+                    call SET_C3_BLOCK(H, idx, 1, n1, n2, 2, n1, n2 - 1, T2) ! T2
+                    call SET_C3_BLOCK(H, idx, 1, n1, n2, 2, n1 + 1, n2, T3)
+                
+                else
+                    ! ----- top  ----- 
+                    p = k - n1 * g1 - n2 * g2 
+
+                    call HSLG(p, -te/2.d0, M)
+                    call SET_C3_BLOCK(H, idx, 2, n1, n2, 2, n1, n2, M)
+                end if
+
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+end subroutine HTBG_C3  
+
+
+! ==========
+! BUILD_C3_INDEX
+! 从原来的正方形平面波截断中，挑选出满足C3z 对称性封闭条件的ket
+! idx(layer,n1,n2) = 0: 当前ket 不属于C3封闭集合
+! idx(layer, n1, n2) > 0 : 当前ket在新哈密顿量中的2 times 2 编号    
+! ==========
+subroutine BUILD_C3_INDEX(idx)
+    implicit none
+    
+    integer, intent(out) :: idx(2,-tr:tr,-tr:tr)
+
+    integer :: layer, n1, n2
+    integer :: i 
+
+    logical :: keep 
+
+    ! ----------
+    ! 初始化
+    ! idx = 0 表示默认不保留任何平面波
+    ! i 记录已经保留的平面波
+    ! ----------
+    idx = 0
+    i = 0
+
+    ! =====
+    ! 对正方形截断进行遍历
+    ! =====
+    do layer = 1, 2
+        do n1 = -tr, tr
+            do n2 = -tr, tr
+                ! ----------
+                ! 检查当前ket的C3首否封闭
+                ! ----------
+                if (layer == 1) then
+                    keep = abs(n1-n2+1) <= tr ! bottom 
+                else 
+                    keep = abs(n1-n2) <= tr ! top
+                end if
+                ! ----------
+                ! 不属于封闭集合的ket，保持idx = 0
+                ! ----------
+                if (.not. keep) cycle
+                ! ----------
+                ! 属于封闭集合的ket, 给其分配一个连续的矩阵块编号
+                ! 不再使用原来的TBG_INDEX
+                ! ----------
+                i = i + 1
+                idx(layer,n1,n2) = i
+            enddo
+        enddo
+    enddo
+
+    ! ==========
+    ! 检查新基底的数量
+    ! ==========
+    if (2*i /= NC3) then
+        error stop 'BUILD_C3_INDEX: C3 basis dimension mismatch'
+    end if
+
+end subroutine BUILD_C3_INDEX
+
+
+! ==========
+! SET_C3_BLOCK
+! 根据 C3 对称基底索引，将一个2 times 2的子晶格矩阵块写入Hamiltonian、
+! ==========
+subroutine SET_C3_BLOCK(H, idx, layer1, n1, n2, layer2, m1, m2, M)
+    implicit none
+    
+    complex(8), intent(inout) :: H(:,:)
+
+    integer, intent(in) :: idx(2, -tr : tr, -tr : tr)
+    integer, intent(in) :: layer1, n1, n2
+    integer, intent(in) :: layer2, m1, m2
+    complex(8), intent(in) :: M(2,2)
+
+    integer :: i, j
+
+    ! =====
+    ! 检查层指标
+    ! =====
+    if (layer1 < 1 .or. layer1 > 2) then
+        error stop 'SET_C3_BLOCK : invalid layer1'
+    endif 
+    if (layer2 < 1 .or. layer2 > 2) then
+        error stop 'SET_C3_BLOCK : invalid layer2'
+    end if
+
+    ! =====
+    ! 检查平面波标签是否超出正方形截断
+    ! =====
+    if (abs(n1) > tr .or. abs(n2) > tr) return
+    if (abs(m1) > tr .or. abs(m2) > tr) return
+
+    ! =====
+    ! 查询压缩后的平面波编号
+    ! =====
+    i = idx(layer1, n1, n2)
+    j = idx(layer2, m1, m2)
+
+    ! =====
+    ! 检查 bra 和 ket 是否都属于 C3 封闭集合
+    ! 一旦有一个态被截断掉，就不应该加入对应矩阵元
+    ! =====
+    if (i == 0 .or. j == 0) return
+    ! ----- 写入哈密顿量 ----- 
+    H(2*i-1:2*i, 2*j-1:2*j) = M
+
+    if (i /= j) then
+        H(2*j-1:2*j, 2*i-1:2*i) = transpose(conjg(M))
+    endif
+
+end subroutine SET_C3_BLOCK
+
+
 end module TBG

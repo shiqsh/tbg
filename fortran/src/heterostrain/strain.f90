@@ -1,6 +1,6 @@
 module STRAIN
     use CONSTANTS
-    use TBG, only : DIAGONAL, ELEMENTS, ASMBL
+    use TBG, only : DIAGONAL, ELEMENTS, ASMBL, BUILD_C3_INDEX, SET_C3_BLOCK
     use MODEL_INTERFACE, only : HAMILTONIAN 
     implicit none
 
@@ -430,6 +430,90 @@ subroutine HAM_DERIVATIVES_STRAIN_PHI(k, ham_param, dH_dkx, dH_dky, dH_dlambda)
                               dH_dkx, dH_dky, dH_dlambda)
 
 end subroutine HAM_DERIVATIVES_STRAIN_PHI
+
+
+! ==========
+! C3 symmetric Hamiltonian under heterostrain 
+! ==========
+subroutine H_STRAIN_C3(k, theta, strain_epsilon, strain_phi, H )
+    implicit none
+    
+    real(8), intent(in) :: k(2) 
+    real(8), intent(in) :: theta    
+    real(8), intent(in) :: strain_epsilon
+    real(8), intent(in) :: strain_phi
+
+    complex(8), intent(out) :: H(:,:)
+
+    ! ----- C3 basis index ----- 
+    integer :: idx(2, -tr:tr, -tr:tr )
+    ! ----- loop 变量 ----- 
+    integer :: layer, n1, n2 
+
+    real(8) :: p(2)
+    real(8) :: S(2, 2)  
+    real(8) :: bs(2,2), q1s(2)
+    real(8) :: vph, A(2)
+
+    complex(8) :: M(2,2)
+
+    if (size(H,1) /= NC3 .or. size(H,2) /= NC3) then
+        error stop 'H_STRAIN_C3: Hamiltonian dimension error'
+    endif
+
+    call BUILD_C3_INDEX(idx)
+
+    call PSEUDOFIELDS(strain_epsilon, strain_phi, S, vph, A)
+
+    call GEOMETRY_STRAIN(theta, strain_epsilon, strain_phi, bs, q1s)
+
+    ! ----- 初始化 ----- 
+    H = 0.d0
+
+    ! =====
+    ! Constructing the hamiltonian under heterostrain
+    ! =====
+    !$OMP PARALLEL DO DEFAULT(NONE) &
+    !$OMP PRIVATE(layer,n1,n2,p,M) &
+    !$OMP SHARED(k,q1s,bs,vph,A,idx,H) &
+    !$OMP COLLAPSE(3) SCHEDULE(STATIC)
+
+    do layer = 1, 2
+        do n1 = -tr , tr
+            do n2 = -tr, tr
+                ! ----- 检查ket是否属于C3封闭的集合 ----- 
+                if (idx(layer, n1, n2) == 0) cycle
+
+                if (layer == 1) then 
+                    ! ----- bottom ----- 
+                    p = k - q1s - n1*bs(:,1) - n2*bs(:,2)
+                    call DIAGONAL(p*vF - gamma_vF*A, M)
+                    M = M - alpha*vph*sigma_0
+                    ! ----- 写入对角块 ----- 
+                    call SET_C3_BLOCK(H, idx, 1, n1, n2, 1, n1, n2, M)
+                    ! ----- 写入非对角块 ----- 
+                    call SET_C3_BLOCK(H, idx, 1, n1, n2, 2, n1, n2, T1)
+                    call SET_C3_BLOCK(H, idx, 1, n1, n2, 2, n1, n2 - 1, T2)
+                    call SET_C3_BLOCK(H, idx, 1, n1, n2, 2, n1 + 1, n2, T3)
+                else
+                    ! ----- top layer ----- 
+                    p = k - n1*bs(:,1) - n2*bs(:,2)
+                    call DIAGONAL(p*vF + gamma_vF*A, M)
+                    M = M + alpha*vph*sigma_0
+                    ! ----- 写入 ----- 
+                    call SET_C3_BLOCK(H ,idx, 2, n1, n2, 2, n1, n2, M)
+                end if
+            enddo
+        enddo
+    enddo
+    !$OMP END PARALLEL DO
+
+end subroutine H_STRAIN_C3
+                    
+
+
+
+    
 
 
 end module STRAIN

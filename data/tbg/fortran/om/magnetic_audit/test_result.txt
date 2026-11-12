@@ -1,2 +1,0 @@
-PASS: magnetic FD minus HF (mu_B/cell):    4.8533160E-08   9.5605044E-08
- PASS: direct finite-field Hamiltonian and cached Omega agree

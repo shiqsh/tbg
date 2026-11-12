@@ -1,0 +1,13 @@
+# TBG fixed-strain scan over ncut
+# theta_deg =     1.400000
+# epsilon_percent =     0.100000
+# phi_deg =    20.000000
+# mu_meV =     0.500000
+# eta_meV =     0.250000
+# nk = 40
+# ncut_list = 330
+# derivative_parameter = strain_epsilon
+# OM_unit = mu_B/cell
+# chi_unit = mu_B/cell per unit strain_epsilon
+# columns: ncut Mx_OM My_OM chi_fix_x chi_fix_y chi_fs_x chi_fs_y chi_tot_x chi_tot_y
+  330    1.6272594386978503E-001   -1.9604435904871487E-001    1.4379685619829846E+002   -1.5449394862985346E+002    1.7454665442435109E+000   -1.4299294450850866E+001    1.4554232274254196E+002   -1.6879324308070431E+002
